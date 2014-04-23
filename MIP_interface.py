@@ -9,54 +9,22 @@ import random
 M = 0
 N = 0
 
-def set_problem_data(p, vm_consumption, physical_config):
-    p.set_problem_name("OpenStack VM placement")
-    p.objective.set_sense(p.objective.sense.minimize)
-
-    # ====================
-    # objective
-    # ====================
-    
-    # the objectiv is to be refined
-    # TODO
-    objective = [k for k in range(M*N+M*(M-1)/2*N*N)]
-
-
-    # ====================
-    # variables
-    # ====================
-
-    # http://www-01.ibm.com/support/knowledgecenter/api/content/SSSA5P_12.6.0/ilog.odms.cplex.help/refcallablelibrary/mipapi/copyctype.html?locale=en
-    # CBISN     coninuous binary integer semi-continuous semi-integer 
-    variable_types = 'B' * ((M*N) + (M*(M-1)*N*N/2))
-    
-    upper_bound = [1 for k in range(M*N)] + [1 for k in range(M*(M-1)*N*N/2)]
-    lower_bound = [0 for k in range(M*N)] + [0 for k in range(M*(M-1)*N*N/2)]
-
-    names = []
-    for k in range(M):
-        for i in range(N):
-            names.append("x_{0}_{1}".format(k, i))
-    for i in range(M):
-        for j in range(i+1, M):
-            for u in range(N):
-                for v in range(N): 
-                    names.append("y_{0}_{1}_{2}_{3}".format(i, j, u, v))
-
-    # for debugging
-    #print "obj: ", len(objective), objective
-    #print "ub: ", len(upper_bound), upper_bound
-    #print "lb: ", len(lower_bound), lower_bound
-    #print "types: ", len(variable_types), variable_types
-    #print "names: ", len(names), names
-
-    p.variables.add(obj = objective, lb = lower_bound, ub = upper_bound, types = variable_types, names = names)
+# S_i is the set of indices of all servers in the rack R_i
+def compute_S_i(physical_config, i, in_S):
+    if in_S == True:
+        return physical_config.rack_user_servers[i]
+    else:
+        servers = []
+        for k in range(physical_config.num_servers):
+            if not physical_config.which_rack[k] == i:
+                servers.append(k)
+        return servers
 
 
-
-    # ====================
-    # constraints
-    # ====================
+# ====================
+# constraints
+# ====================
+def add_constraints(p, vm_consumption, vm_traffic_matrix, physical_config):
     # Populate by rows
     rows = []
     # constraint of vm placement
@@ -85,25 +53,43 @@ def set_problem_data(p, vm_consumption, physical_config):
         memory_coefficient = []
         for i in range(M):
             variables.append("x_{0}_{1}".format(i, j))
-            cpu_coefficient.append(2)#vm_consumption[i][0])
-            memory_coefficient.append(3)#vm_consumption[i][1])
+            cpu_coefficient.append(vm_consumption[i][0])
+            memory_coefficient.append(vm_consumption[i][1])
 
         rows.append([variables, cpu_coefficient])
         rows.append([variables, memory_coefficient])
 
-            
-
-    #print "\n"
-    #print "rows: ", rows
-
+    # computation of l variables
+    for i in range(physical_config.num_links):
+        variables = []
+        coefficient = []
+        for p in range(M):
+            for q in range(M):
+                if q == p:
+                    continue
+                for j in compute_S_i(physical_config, i, in_S = True):
+                    for s in compute_S_i(physical_config, i, in_S = False):
+                        if p < q:
+                            variables.append("y_{0}_{1}_{2}_{3}".format(p, q, j, s))
+                        else:
+                            variables.append("y_{0}_{1}_{2}_{3}".format(q, p, j, s))
+                        coefficient.append(vm_traffic_matrix[p][q])
+        variables.append("l_{0}".format(i))
+        coefficient.append(-1)
+        rows.append([variables, coefficient])
+    
   
     placement_constraints = [1 for k in range(M)]
-    for k in range (M*(M-1)*N*N/2):
+    for k in range(M*(M-1)*N*N/2):
         placement_constraints += [0, 0, 1]
-    for k in range (N):
+    for k in range(N):
         placement_constraints += [physical_config.constraint_cpu[k], physical_config.constraint_memory[k]]
+    for k in range(physical_config.num_links):
+        placement_constraints += [0]
+
     placement_senses = 'E' * M + 'GGL' * (M*(M-1)*N*N/2)       # E means 'equal'  
     placement_senses += 'L' * (2*N)
+    placement_senses += 'E' * (physical_config.num_links)
     #print placement_constraints
     #print placement_senses
 
@@ -111,17 +97,70 @@ def set_problem_data(p, vm_consumption, physical_config):
 
 
 
+
+def set_problem_data(p, vm_consumption, vm_traffic_matrix, physical_config):
+    p.set_problem_name("OpenStack VM placement")
+    p.objective.set_sense(p.objective.sense.minimize)
+
+    # ====================
+    # objective
+    # ====================
+    
+    # the objectiv is to be refined
+    # TODO
+    objective = [k for k in range(M*N+M*(M-1)/2*N*N+physical_config.num_links*2)]
+
+
+    # ====================
+    # variables
+    # ====================
+
+    # http://www-01.ibm.com/support/knowledgecenter/api/content/SSSA5P_12.6.0/ilog.odms.cplex.help/refcallablelibrary/mipapi/copyctype.html?locale=en
+    # CBISN     coninuous binary integer semi-continuous semi-integer 
+    variable_types = 'B' * ((M*N) + (M*(M-1)*N*N/2))
+    # l (all traffic over a link) and z (phi(l))
+    variable_types += 'C' * (2*physical_config.num_links)
+    
+    upper_bound = [1 for k in range(M*N)] + [1 for k in range(M*(M-1)*N*N/2)] + [cplex.infinity for k in range(physical_config.num_links)] + [cplex.infinity for k in range(physical_config.num_links)]
+    lower_bound = [0 for k in range(M*N)] + [0 for k in range(M*(M-1)*N*N/2)] + [0 for k in range(physical_config.num_links)] + [0 for k in range(physical_config.num_links)]
+
+    names = []
+    for k in range(M):
+        for i in range(N):
+            names.append("x_{0}_{1}".format(k, i))
+    for i in range(M):
+        for j in range(i+1, M):
+            for u in range(N):
+                for v in range(N): 
+                    names.append("y_{0}_{1}_{2}_{3}".format(i, j, u, v))
+    for k in range(physical_config.num_links):
+        names.append("l_{0}".format(k))
+    for k in range(physical_config.num_links):
+        names.append("z_{0}".format(k))
+
+    # for debugging
+    #print "obj: ", len(objective)#, objective
+    #print "ub: ", len(upper_bound)#, upper_bound
+    #print "lb: ", len(lower_bound)#, lower_bound
+    #print "types: ", len(variable_types)#, variable_types
+    #print "names: ", len(names)#, names
+
+    p.variables.add(obj = objective, lb = lower_bound, ub = upper_bound, types = variable_types, names = names)
+
+    add_constraints(p, vm_consumption, vm_traffic_matrix, physical_config)
+
     print "the problem data has been set!"
 
 
+
+# the main interface
 def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config):
     global M, N
-
     M = num_vms
     N = physical_config.num_servers
     
     placement = cplex.Cplex()
-    set_problem_data(placement, vm_consumption, physical_config)
+    set_problem_data(placement, vm_consumption, vm_traffic_matrix, physical_config)
     
     # try to tune
     placement.parameters.timelimit.set(1500.0)
