@@ -11,7 +11,8 @@
 # constraint_memory             is a list indicating how much memory (MB) each server has
 # num_links                     is the number of all physical links (out of racks)
 # link_capacity                 is the traffic capacity (MB) of each link
-# link_occupation_matrix        is a 3-dimension list and meanwhile a symmetric matrix, indication which links each pair of racks use
+# link_occupation_matrix        can be ignored for now
+#                               is a 3-dimension list and meanwhile a symmetric matrix, indication which links each pair of racks use
 #                               e.g.    [[ [], [0, 1], [0, 2] ], [ [0, 1], [], [1, 2] ], [ [0, 2], [1, 2], [] ]]    rack_0 and rack_1 use link [0, 1], rack_0 and rack_0 use link []
 # link_user_racks               * can be ignored for now
 #

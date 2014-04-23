@@ -1,12 +1,73 @@
-def create_testbench():
+#!/usr/bin/python
 
-# R is the number of racks
-# S in the number of servers in each rack
-R = 3
-S = 4
+import random
+from physical_configuration import PhysicalConfig
+import numpy
+
+
+# num_racks is the number of racks
+# num_server_per_rack in the number of servers in each rack
+num_racks = 3
+num_server_per_rack = 2
+num_servers = num_racks * num_server_per_rack 
 
 # num_links is the number of links (out of racks). 
 # Suppos all racks are linked to a single switch, then num_links is the same with the number of R
-num_links = R
+num_links = num_racks
+
+vm_per_server = 2
+
+num_vm = vm_per_server * num_servers
+
+vm_memory_scale = [512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
+vm_cpu_scale = [1, 2, 4, 8, 11]
+
+# create a traffic matrix
+def create_traffic_matrix():
+    t = []
+    for k in range(num_vm):
+        row = []
+        for i in range(num_vm):
+            if i < k:
+                row.append(t[i][k])
+            elif i == k:
+                row.append(0)
+            else:
+                row.append(random.randint(1, 1000))
+        t.append(row)
+
+    #f=open('traffic_matrix.txt', 'a')
+    #f.write(t)
+    #f.close()
+
+    print "the traffic matrix: "
+    print t
+    return t
+
+def create_physical_config_instance():
+    which_rack = []
+    for k in range(num_racks):
+        for i in range(num_server_per_rack):
+            which_rack.append(k)
+    print which_rack
+
+    constraint_cpu = [12 for k in range(num_servers)]
+    print "constraint on cpus", constraint_cpu
+
+    constraint_memory = [128000 for k in range(num_servers)]
+    print "constraint on memory", constraint_memory
+
+    link_capacity = [10000 for k in range(num_links)]
+    print "link capacity", link_capacity
+    
+    config = PhysicalConfig(num_servers = num_servers, num_racks = num_racks, which_rack = which_rack, constraint_cpu = constraint_cpu, constraint_memory = constraint_memory, num_links = num_links, link_capacity = link_capacity)
+    return config
 
 
+# num_servers = 0, num_racks = 0, which_rack = [], traffic_cost_matrix = [], constraint_cpu = [], constraint_memory = [], num_links = 0, link_capacity = [], link_occupation_matrix = [], link_user_racks = []):
+
+
+if __name__ == "__main__":
+    #create_traffic_matrix()
+    
+    config = create_physical_config_instance()

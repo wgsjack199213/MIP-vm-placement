@@ -13,6 +13,10 @@ N = 2
 def set_problem_data(p):
     p.set_problem_name("OpenStack VM placement")
     p.objective.set_sense(p.objective.sense.minimize)
+
+    # ====================
+    # objective
+    # ====================
     
     # the objectiv is to be refined
     # TODO
