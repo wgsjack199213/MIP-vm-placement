@@ -24,7 +24,7 @@ def compute_S_i(physical_config, i, in_S):
 # ====================
 # constraints
 # ====================
-def add_constraints(p, vm_consumption, vm_traffic_matrix, physical_config):
+def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config):
     # Populate by rows
     rows = []
     # constraint of vm placement
@@ -64,15 +64,15 @@ def add_constraints(p, vm_consumption, vm_traffic_matrix, physical_config):
         variables = []
         coefficient = []
         for p in range(M):
-            for q in range(M):
-                if q == p:
-                    continue
+            # to avoid duplicately adding y variable into rows, we consider pair by pair
+            # switching p and q
+            for q in range(p+1, M):
+                # now p < q 
                 for j in compute_S_i(physical_config, i, in_S = True):
                     for s in compute_S_i(physical_config, i, in_S = False):
-                        if p < q:
-                            variables.append("y_{0}_{1}_{2}_{3}".format(p, q, j, s))
-                        else:
-                            variables.append("y_{0}_{1}_{2}_{3}".format(q, p, j, s))
+                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, j, s))
+                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, s, j))
+                        coefficient.append(vm_traffic_matrix[p][q])
                         coefficient.append(vm_traffic_matrix[p][q])
         variables.append("l_{0}".format(i))
         coefficient.append(-1)
@@ -93,7 +93,7 @@ def add_constraints(p, vm_consumption, vm_traffic_matrix, physical_config):
     #print placement_constraints
     #print placement_senses
 
-    p.linear_constraints.add(lin_expr = rows, rhs = placement_constraints, senses = placement_senses)
+    problem.linear_constraints.add(lin_expr = rows, rhs = placement_constraints, senses = placement_senses)
 
 
 
