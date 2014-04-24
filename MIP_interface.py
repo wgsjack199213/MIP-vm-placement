@@ -77,6 +77,11 @@ def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config)
         variables.append("l_{0}".format(i))
         coefficient.append(-1)
         rows.append([variables, coefficient])
+
+    # to minimize the heavest link
+    for k in range(physical_config.num_links):
+        rows.append([["l_{0}".format(k), "heavest_link"], [1, -1]])
+
     
   
     placement_constraints = [1 for k in range(M)]
@@ -87,9 +92,16 @@ def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config)
     for k in range(physical_config.num_links):
         placement_constraints += [0]
 
+    # to minimize the max
+    for k in range(physical_config.num_links):
+        placement_constraints += [0]
+
+
+
     placement_senses = 'E' * M + 'GGL' * (M*(M-1)*N*N/2)       # E means 'equal'  
     placement_senses += 'L' * (2*N)
-    placement_senses += 'E' * (physical_config.num_links)
+    placement_senses += 'E' * physical_config.num_links
+    placement_senses += 'L' * physical_config.num_links
     #print placement_constraints
     #print placement_senses
 
@@ -108,7 +120,8 @@ def set_problem_data(p, vm_consumption, vm_traffic_matrix, physical_config):
     
     # the objectiv is to be refined
     # TODO
-    objective = [k for k in range(M*N+M*(M-1)/2*N*N+physical_config.num_links*2)]
+    objective = [0 for k in range(M*N+M*(M-1)/2*N*N+physical_config.num_links*2)]
+    objective.append(1)
 
 
     # ====================
@@ -120,9 +133,11 @@ def set_problem_data(p, vm_consumption, vm_traffic_matrix, physical_config):
     variable_types = 'B' * ((M*N) + (M*(M-1)*N*N/2))
     # l (all traffic over a link) and z (phi(l))
     variable_types += 'C' * (2*physical_config.num_links)
+
+    variable_types += 'C'
     
-    upper_bound = [1 for k in range(M*N)] + [1 for k in range(M*(M-1)*N*N/2)] + [cplex.infinity for k in range(physical_config.num_links)] + [cplex.infinity for k in range(physical_config.num_links)]
-    lower_bound = [0 for k in range(M*N)] + [0 for k in range(M*(M-1)*N*N/2)] + [0 for k in range(physical_config.num_links)] + [0 for k in range(physical_config.num_links)]
+    upper_bound = [1 for k in range(M*N)] + [1 for k in range(M*(M-1)*N*N/2)] + [cplex.infinity for k in range(physical_config.num_links)] + [cplex.infinity for k in range(physical_config.num_links)] + [cplex.infinity]
+    lower_bound = [0 for k in range(M*N)] + [0 for k in range(M*(M-1)*N*N/2)] + [0 for k in range(physical_config.num_links)] + [0 for k in range(physical_config.num_links)] + [0]
 
     names = []
     for k in range(M):
@@ -137,6 +152,8 @@ def set_problem_data(p, vm_consumption, vm_traffic_matrix, physical_config):
         names.append("l_{0}".format(k))
     for k in range(physical_config.num_links):
         names.append("z_{0}".format(k))
+
+    names.append("heavest_link")
 
     # for debugging
     #print "obj: ", len(objective)#, objective
