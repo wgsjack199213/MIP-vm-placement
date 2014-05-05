@@ -7,15 +7,15 @@ from MIP_interface import migrate_policy
 
 # num_racks is the number of racks
 # num_server_per_rack in the number of servers in each rack
-num_racks = 4
-num_server_per_rack = 4
+num_racks = 12
+num_server_per_rack = 15
 num_servers = num_racks * num_server_per_rack 
 
 # num_links is the number of links (out of racks). 
 # Suppos all racks are linked to a single switch, then num_links is the same with the number of R
 num_links = num_racks
 
-num_vms_per_server = 1
+num_vms_per_server = 2
 
 num_vms = num_vms_per_server * num_servers
 
@@ -24,7 +24,7 @@ vm_cpu_scale = [1, 2, 4, 8, 11]
 
 random_bandwidth_upper_bound = 200
 
-num_top_noisy_vms = 5
+num_top_noisy_vms = 2
 
 
 # create a traffic matrix
@@ -64,22 +64,23 @@ def select_most_noisy_vms(traffic_matrix):
         indice.append(traffic.index(tmp))
         traffic_copy.remove(tmp)
     #print ans, indice
+    return indice
 
 def create_physical_config_instance():
     which_rack = []
     for k in range(num_racks):
         for i in range(num_server_per_rack):
             which_rack.append(k)
-    print "which rack", which_rack
+    #print "which rack", which_rack
 
     constraint_cpu = [12 for k in range(num_servers)]
-    print "constraint on cpus", constraint_cpu
+    #print "constraint on cpus", constraint_cpu
 
     constraint_memory = [128000 for k in range(num_servers)]
-    print "constraint on memory", constraint_memory
+    #print "constraint on memory", constraint_memory
 
     link_capacity = [10000 for k in range(num_links)]
-    print "link capacity", link_capacity
+    #print "link capacity", link_capacity
     
     config = PhysicalConfig(num_servers = num_servers, num_racks = num_racks, which_rack = which_rack, constraint_cpu = constraint_cpu, constraint_memory = constraint_memory, num_links = num_links, link_capacity = link_capacity)
     return config
@@ -90,8 +91,8 @@ def create_physical_config_instance():
 def generate_vm_consumption():
     vm_consumption = []
     for k in range(num_vms):
-        cpu = vm_cpu_scale[random.randint(0, 3)]
-        memory = vm_memory_scale[random.randint(0, 7)]
+        cpu = vm_cpu_scale[random.randint(0, 2)]
+        memory = vm_memory_scale[random.randint(0, 6)]
         vm_consumption.append([cpu, memory])
     print "vm consumption", vm_consumption
     return vm_consumption
@@ -110,11 +111,25 @@ if __name__ == "__main__":
 
     most_noisy_vms = select_most_noisy_vms(traffic)
     
-    vm_consumption = generate_vm_consumption()
+    all_vm_consumption = generate_vm_consumption()
+    all_original_placement = generate_original_placement()
+    all_test_config = create_physical_config_instance()
 
-    original_placement = generate_original_placement()
+    # only consider the most noisy vms
+    vm_consumption = []
+    original_placement = []
+    for k in range(num_top_noisy_vms):
+        vm_consumption.append(all_vm_consumption[most_noisy_vms[k]])
+        original_placement.append(all_original_placement[most_noisy_vms[k]])
 
     test_config = create_physical_config_instance()
+    for k in range(num_vms):
+        if k in most_noisy_vms:
+            continue
+        test_config.constraint_cpu[all_original_placement[k]] -= all_vm_consumption[k][0]
+        test_config.constraint_memory[all_original_placement[k]] -= all_vm_consumption[k][1]
+    print "constraint on cpus", test_config.constraint_cpu
+    print "constraint on memory", test_config.constraint_memory
     
     print "migrate_policy is being called..."
-    migrate_policy(num_vms, vm_consumption, traffic, original_placement, test_config)
+    migrate_policy(num_top_noisy_vms, vm_consumption, traffic, original_placement, test_config)
