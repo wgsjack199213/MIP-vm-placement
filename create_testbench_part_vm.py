@@ -128,8 +128,11 @@ if __name__ == "__main__":
             continue
         test_config.constraint_cpu[all_original_placement[k]] -= all_vm_consumption[k][0]
         test_config.constraint_memory[all_original_placement[k]] -= all_vm_consumption[k][1]
-    print "constraint on cpus", test_config.constraint_cpu
-    print "constraint on memory", test_config.constraint_memory
+    #print "constraint on cpus", test_config.constraint_cpu
+    #print "constraint on memory", test_config.constraint_memory
     
+    # compute how much capacity has been used in each link
+
+
     print "migrate_policy is being called..."
     migrate_policy(num_top_noisy_vms, vm_consumption, traffic, original_placement, test_config)
