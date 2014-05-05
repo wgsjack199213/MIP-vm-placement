@@ -1,5 +1,7 @@
 # OpenStack virtual machine placement
-# try to solve the mixed integer programming problem with NO quadratic opjection
+# try to solve the mixed integer programming problem with a quadratic opjection
+# THIS IS IMPOSSIBLE
+# ABANDONED
 
 import sys
 sys.path.append('/Users/wgs/projects/IBM/ILOG/CPLEX_Studio126/cplex/python/x86-64_osx/')
@@ -35,17 +37,6 @@ def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config)
 
         rows.append([variables, [1 for j in range(N)]])
    
-   # constraint of y
-    for i in range(M):
-        for j in range(i+1, M):
-            for u in range(N):
-                for v in range(N): 
-                    x_1, x_2 = "x_{0}_{1}".format(i, u), "x_{0}_{1}".format(j, v)
-                    y = "y_{0}_{1}_{2}_{3}".format(i, j, u, v)
-                    rows.append([[x_1, y], [1, -1]])
-                    rows.append([[x_2, y], [1, -1]])
-                    rows.append([[x_1, x_2, y], [1, 1, -1]])
-
     # constraint of resources
     for j in range(N):
         variables = []
@@ -60,37 +51,32 @@ def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config)
         rows.append([variables, memory_coefficient])
 
     # computation of l variables
-    for i in range(physical_config.num_links):
-        variables = []
-        coefficient = []
-        for p in range(M):
-            # to avoid duplicately adding y variable into rows, we consider pair by pair
-            # switching p and q
-            for q in range(p+1, M):
-                # now p < q 
-                for j in compute_S_i(physical_config, i, in_S = True):
-                    for s in compute_S_i(physical_config, i, in_S = False):
-                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, j, s))
-                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, s, j))
-                        coefficient.append(vm_traffic_matrix[p][q])
-                        coefficient.append(vm_traffic_matrix[p][q])
-        variables.append("l_{0}".format(i))
-        coefficient.append(-1)
-        rows.append([variables, coefficient])
+#    for i in range(physical_config.num_links):
+ #   variables = []
+  #      coefficient = []
+   #     for p in range(M):
+    #        # to avoid duplicately adding y variable into rows, we consider pair by pair
+     #       # switching p and q
+      #      for q in range(p+1, M):
+       #         # now p < q 
+        #        for j in compute_S_i(physical_config, i, in_S = True):
+         #           for s in compute_S_i(physical_config, i, in_S = False):
+          #              variables.append("y_{0}_{1}_{2}_{3}".format(p, q, j, s))
+           #             variables.append("y_{0}_{1}_{2}_{3}".format(p, q, s, j))
+            #            coefficient.append(vm_traffic_matrix[p][q])
+             #           coefficient.append(vm_traffic_matrix[p][q])
+#        variables.append("l_{0}".format(i))
+ #       coefficient.append(-1)
+  #      rows.append([variables, coefficient])
 
     # to minimize the heavest link
     for k in range(physical_config.num_links):
         rows.append([["l_{0}".format(k), "heavest_link"], [1, -1]])
 
-    
   
     placement_constraints = [1 for k in range(M)]
-    for k in range(M*(M-1)*N*N/2):
-        placement_constraints += [0, 0, 1]
     for k in range(N):
         placement_constraints += [physical_config.constraint_cpu[k], physical_config.constraint_memory[k]]
-    for k in range(physical_config.num_links):
-        placement_constraints += [0]
 
     # to minimize the max
     for k in range(physical_config.num_links):
@@ -98,9 +84,8 @@ def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config)
 
 
 
-    placement_senses = 'E' * M + 'GGL' * (M*(M-1)*N*N/2)       # E means 'equal'  
+    placement_senses = 'E' * M      # E means 'equal'  
     placement_senses += 'L' * (2*N)
-    placement_senses += 'E' * physical_config.num_links
     placement_senses += 'L' * physical_config.num_links
     #print placement_constraints
     #print placement_senses
@@ -120,7 +105,7 @@ def set_problem_data(p, vm_consumption, vm_traffic_matrix, physical_config):
     
     # the objectiv is to be refined
     # TODO
-    objective = [0 for k in range(M*N+M*(M-1)/2*N*N+physical_config.num_links*2)]
+    objective = [0 for k in range(M*N+physical_config.num_links*2)]
     objective.append(1)
 
 
@@ -130,24 +115,19 @@ def set_problem_data(p, vm_consumption, vm_traffic_matrix, physical_config):
 
     # http://www-01.ibm.com/support/knowledgecenter/api/content/SSSA5P_12.6.0/ilog.odms.cplex.help/refcallablelibrary/mipapi/copyctype.html?locale=en
     # CBISN     coninuous binary integer semi-continuous semi-integer 
-    variable_types = 'B' * ((M*N) + (M*(M-1)*N*N/2))
+    variable_types = 'B' * (M*N)
     # l (all traffic over a link) and z (phi(l))
     variable_types += 'C' * (2*physical_config.num_links)
 
     variable_types += 'C'
     
-    upper_bound = [1 for k in range(M*N)] + [1 for k in range(M*(M-1)*N*N/2)] + [cplex.infinity for k in range(physical_config.num_links)] + [cplex.infinity for k in range(physical_config.num_links)] + [cplex.infinity]
-    lower_bound = [0 for k in range(M*N)] + [0 for k in range(M*(M-1)*N*N/2)] + [0 for k in range(physical_config.num_links)] + [0 for k in range(physical_config.num_links)] + [0]
+    upper_bound = [1 for k in range(M*N)] + [cplex.infinity for k in range(physical_config.num_links)] + [cplex.infinity for k in range(physical_config.num_links)] + [cplex.infinity]
+    lower_bound = [0 for k in range(M*N)] + [0 for k in range(physical_config.num_links)] + [0 for k in range(physical_config.num_links)] + [0]
 
     names = []
     for k in range(M):
         for i in range(N):
             names.append("x_{0}_{1}".format(k, i))
-    for i in range(M):
-        for j in range(i+1, M):
-            for u in range(N):
-                for v in range(N): 
-                    names.append("y_{0}_{1}_{2}_{3}".format(i, j, u, v))
     for k in range(physical_config.num_links):
         names.append("l_{0}".format(k))
     for k in range(physical_config.num_links):

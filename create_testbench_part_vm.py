@@ -24,6 +24,9 @@ vm_cpu_scale = [1, 2, 4, 8, 11]
 
 random_bandwidth_upper_bound = 200
 
+num_top_noisy_vms = 5
+
+
 # create a traffic matrix
 def create_traffic_matrix():
     t = []
@@ -45,6 +48,22 @@ def create_traffic_matrix():
     print "the traffic matrix: "
     print t
     return t
+
+def select_most_noisy_vms(traffic_matrix):
+    traffic = [0 for k in range(num_vms)]
+    for k in range(num_vms):
+        for i in range(num_vms):
+            traffic[k] += traffic_matrix[k][i]
+
+    ans = []
+    indice = []
+    traffic_copy = traffic[:]
+    for i in xrange(num_top_noisy_vms):
+        tmp = max(traffic_copy)
+        ans.append(tmp)
+        indice.append(traffic.index(tmp))
+        traffic_copy.remove(tmp)
+    #print ans, indice
 
 def create_physical_config_instance():
     which_rack = []
@@ -89,6 +108,8 @@ if __name__ == "__main__":
     traffic = create_traffic_matrix()
     #traffic = [[0, 190, 19, 134, 155, 154, 125, 164, 120, 168, 52, 37], [190, 0, 104, 45, 198, 117, 158, 199, 93, 96, 129, 84], [19, 104, 0, 175, 12, 126, 93, 140, 200, 152, 184, 17], [134, 45, 175, 0, 106, 182, 129, 172, 43, 44, 184, 85], [155, 198, 12, 106, 0, 125, 184, 108, 100, 32, 116, 171], [154, 117, 126, 182, 125, 0, 9, 155, 59, 186, 104, 79], [125, 158, 93, 129, 184, 9, 0, 184, 139, 190, 9, 168], [164, 199, 140, 172, 108, 155, 184, 0, 83, 117, 39, 180], [120, 93, 200, 43, 100, 59, 139, 83, 0, 148, 63, 81], [168, 96, 152, 44, 32, 186, 190, 117, 148, 0, 115, 8], [52, 129, 184, 184, 116, 104, 9, 39, 63, 115, 0, 122], [37, 84, 17, 85, 171, 79, 168, 180, 81, 8, 122, 0]]
 
+    most_noisy_vms = select_most_noisy_vms(traffic)
+    
     vm_consumption = generate_vm_consumption()
 
     original_placement = generate_original_placement()
