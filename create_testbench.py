@@ -9,14 +9,14 @@ from MIP_interface import migrate_policy
 # num_racks is the number of racks
 # num_server_per_rack in the number of servers in each rack
 num_racks = 4
-num_server_per_rack = 6
+num_server_per_rack = 4
 num_servers = num_racks * num_server_per_rack 
 
 # num_links is the number of links (out of racks). 
 # Suppos all racks are linked to a single switch, then num_links is the same with the number of R
 num_links = num_racks
 
-num_vms_per_server = 2
+num_vms_per_server = 1
 
 num_vms = num_vms_per_server * num_servers
 
