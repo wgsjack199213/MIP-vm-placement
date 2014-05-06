@@ -24,7 +24,7 @@ def compute_S_i(physical_config, i, in_S):
 # ====================
 # constraints
 # ====================
-def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config):
+def add_constraints(problem, vm_consumption, vm_traffic_matrix, link_capacity_consumed, physical_config):
     # Populate by rows
     rows = []
     # constraint of vm placement
@@ -59,7 +59,7 @@ def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config)
         rows.append([variables, cpu_coefficient])
         rows.append([variables, memory_coefficient])
 
-    # computation of l variables
+    # computation of l variables (traffic on each link)
     for i in range(physical_config.num_links):
         variables = []
         coefficient = []
@@ -89,8 +89,11 @@ def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config)
         placement_constraints += [0, 0, 1]
     for k in range(N):
         placement_constraints += [physical_config.constraint_cpu[k], physical_config.constraint_memory[k]]
+
+    if link_capacity_consumed == []:
+        link_capacity_consumed = [0 for k in range(physical_config.num_links)]
     for k in range(physical_config.num_links):
-        placement_constraints += [0]
+        placement_constraints += [ -link_capacity_consumed[k] ]
 
     # to minimize the max
     for k in range(physical_config.num_links):
@@ -110,7 +113,7 @@ def add_constraints(problem, vm_consumption, vm_traffic_matrix, physical_config)
 
 
 
-def set_problem_data(p, vm_consumption, vm_traffic_matrix, physical_config):
+def set_problem_data(p, vm_consumption, vm_traffic_matrix, physical_config, link_capacity_consumed):
     p.set_problem_name("OpenStack VM placement")
     p.objective.set_sense(p.objective.sense.minimize)
 
@@ -164,20 +167,20 @@ def set_problem_data(p, vm_consumption, vm_traffic_matrix, physical_config):
 
     p.variables.add(obj = objective, lb = lower_bound, ub = upper_bound, types = variable_types, names = names)
 
-    add_constraints(p, vm_consumption, vm_traffic_matrix, physical_config)
+    add_constraints(p, vm_consumption, vm_traffic_matrix, link_capacity_consumed, physical_config)
 
     print "the problem data has been set!"
 
 
 
 # the main interface
-def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config):
+def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed = []):
     global M, N
     M = num_vms
     N = physical_config.num_servers
     
     placement = cplex.Cplex()
-    set_problem_data(placement, vm_consumption, vm_traffic_matrix, physical_config)
+    set_problem_data(placement, vm_consumption, vm_traffic_matrix, physical_config, link_capacity_consumed)
     
     # try to tune
     placement.parameters.timelimit.set(1500.0)

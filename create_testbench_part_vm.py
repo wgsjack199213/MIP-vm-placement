@@ -45,8 +45,8 @@ def create_traffic_matrix():
     #f.write(t)
     #f.close()
 
-    print "the traffic matrix: "
-    print t
+    #print "the traffic matrix: "
+    #print t
     return t
 
 def select_most_noisy_vms(traffic_matrix):
@@ -65,6 +65,26 @@ def select_most_noisy_vms(traffic_matrix):
         traffic_copy.remove(tmp)
     #print ans, indice
     return indice
+
+def compute_link_used_capacity(original_placement, traffic, most_noisy_vms, test_config):
+    link_used = [0 for k in range(test_config.num_links)]
+    # enumerate vm pair k and i, check if they are in the same rack
+    for k in range(num_vms):
+        if k in most_noisy_vms:
+            continue
+        for i in range(num_vms):
+            if i in most_noisy_vms:
+                continue
+            rack_of_k, rack_of_i = test_config.which_rack[original_placement[k]], test_config.which_rack[original_placement[i]]
+            if rack_of_k == rack_of_i:
+                continue
+            link_used[rack_of_k] += traffic[k][i]
+    print "link capacity that has been used: ", link_used
+    return link_used
+
+
+    
+    
 
 def create_physical_config_instance():
     which_rack = []
@@ -94,7 +114,7 @@ def generate_vm_consumption():
         cpu = vm_cpu_scale[random.randint(0, 2)]
         memory = vm_memory_scale[random.randint(0, 6)]
         vm_consumption.append([cpu, memory])
-    print "vm consumption", vm_consumption
+    #print "vm consumption", vm_consumption
     return vm_consumption
 
 def generate_original_placement():
@@ -102,7 +122,7 @@ def generate_original_placement():
     for k in range(num_servers):
         for i in range(num_vms_per_server):
             original_placement.append(k)
-    print "original placement", original_placement
+    #print "original placement", original_placement
     return original_placement
 
 if __name__ == "__main__":
@@ -132,7 +152,7 @@ if __name__ == "__main__":
     #print "constraint on memory", test_config.constraint_memory
     
     # compute how much capacity has been used in each link
-
+    link_capacity_consumed = compute_link_used_capacity(all_original_placement, traffic, most_noisy_vms, test_config)
 
     print "migrate_policy is being called..."
-    migrate_policy(num_top_noisy_vms, vm_consumption, traffic, original_placement, test_config)
+    migrate_policy(num_top_noisy_vms, vm_consumption, traffic, original_placement, test_config, link_capacity_consumed)
