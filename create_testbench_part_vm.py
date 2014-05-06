@@ -24,7 +24,7 @@ vm_cpu_scale = [1, 2, 4, 8, 11]
 
 random_bandwidth_upper_bound = 200
 
-num_top_noisy_vms = 5
+num_top_noisy_vms = 3
 
 
 # create a traffic matrix
@@ -32,13 +32,17 @@ def create_traffic_matrix():
     t = []
     for k in range(num_vms):
         row = []
+        busy_flag = random.random() < 0.5
         for i in range(num_vms):
             if i < k:
                 row.append(t[i][k])
             elif i == k:
                 row.append(0)
             else:
-                row.append(random.randint(1, random_bandwidth_upper_bound))
+                if busy_flag:
+                    row.append(random.randint(random_bandwidth_upper_bound / 2, random_bandwidth_upper_bound))
+                else:
+                    row.append(random.randint(0, random_bandwidth_upper_bound / 2))
         t.append(row)
 
     #f=open('traffic_matrix.txt', 'a')
