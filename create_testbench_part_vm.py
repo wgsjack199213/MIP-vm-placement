@@ -24,7 +24,7 @@ vm_cpu_scale = [1, 2, 4, 8, 11]
 
 random_bandwidth_upper_bound = 200
 
-num_top_noisy_vms = 2
+num_top_noisy_vms = 5
 
 
 # create a traffic matrix
