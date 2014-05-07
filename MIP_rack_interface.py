@@ -168,8 +168,8 @@ def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, physical_con
 
 
 
-# the main interface
-def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed = []):
+# the second main interface
+def set_and_solve_problem(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed = []):
     M = num_vms
     N = physical_config
     
@@ -216,3 +216,74 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
 
     placement.write("openstack_output.txt")
     print "THE END"
+
+
+
+
+def select_most_noisy_vms(num_vms, traffic_matrix, num_top_noisy_vms):
+    traffic = [0 for k in range(num_vms)]
+    for k in range(num_vms):
+        for i in range(num_vms):
+            traffic[k] += traffic_matrix[k][i]
+
+    ans = []
+    indice = []
+    traffic_copy = traffic[:]
+    for i in xrange(num_top_noisy_vms):
+        tmp = max(traffic_copy)
+        ans.append(tmp)
+        indice.append(traffic.index(tmp))
+        traffic_copy.remove(tmp)
+    #print ans, indice
+    return indice
+
+# for debug
+def compute_link_used_capacity(num_vms, original_placement, traffic, most_noisy_vms, config):
+    link_used = [0 for k in range(config.num_links)]
+    # enumerate vm pair k and i, check if they are in the same rack
+    for k in range(num_vms):
+        if k in most_noisy_vms:
+            continue
+        for i in range(num_vms):
+            if i in most_noisy_vms:
+                continue
+            rack_of_k, rack_of_i = config.which_rack[original_placement[k]], config.which_rack[original_placement[i]]
+            if rack_of_k == rack_of_i:
+                continue
+            link_used[rack_of_k] += traffic[k][i]
+    #print "link capacity that has been used: ", link_used
+    return link_used
+
+
+# the firt main interface
+def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config):
+    num_top_noisy_vms = 10
+
+    most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, num_top_noisy_vms)
+
+    # only consider the most busiest vms
+    busy_vm_consumption = []
+    for k in range(num_top_noisy_vms):
+        busy_vm_consumption.append(vm_consumption[most_noisy_vms[k]])
+        #busy_original_placement.append(original_placement[most_noisy_vms[k]])
+
+    for k in range(num_vms):
+        if k in most_noisy_vms:
+            continue
+        physical_config.constraint_cpu[original_placement[k]] -= vm_consumption[k][0]
+        physical_config.constraint_memory[original_placement[k]] -= vm_consumption[k][1]
+    #print "constraint on cpus", physical_config.constraint_cpu
+    #print "constraint on memory", physical_config.constraint_memory
+    physical_config.compute_available_rack_resource()
+
+    # compute how much capacity has been used in each link
+    link_capacity_consumed = compute_link_used_capacity(num_vms, original_placement, vm_traffic_matrix, most_noisy_vms, physical_config)
+
+    # compute current state of each link
+    no_vms = []
+    link_state = compute_link_used_capacity(num_vms, original_placement, vm_traffic_matrix, no_vms, physical_config)
+    print "traffic on each link: ", link_state
+
+    print "begin set_and_solve_problem"
+    set_and_solve_problem(num_top_noisy_vms, busy_vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed)
+    
