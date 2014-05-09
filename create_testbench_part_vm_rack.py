@@ -15,7 +15,7 @@ num_servers = num_racks * num_server_per_rack
 # Suppos all racks are linked to a single switch, then num_links is the same with the number of R
 num_links = num_racks
 
-num_vms_per_server = 2
+num_vms_per_server = 4
 
 num_vms = num_vms_per_server * num_servers
 
