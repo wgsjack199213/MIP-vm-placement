@@ -268,6 +268,36 @@ def process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placem
     return migration_operations 
 
 
+def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
+    operations = []
+    for migration in migrate_to_rack:
+        vm, rack = migration[0], migration[1]
+        candidate_servers = []
+        for server in physical_config.rack_user_servers[rack]:
+            if physical_config.constraint_cpu[server] > vm_consumption[vm][0] and physical_config.constraint_memory[server] > vm_consumption[vm][1]:
+                candidate_servers.append(server)
+
+        #candidate_servers = sorted(candidate_servers, cmp=lambda x,y : cmp(physical_config.constraint_memory[y], physical_config.constraint_memory[x]))
+        #print candidate_servers
+        #temp = []
+        #for x in candidate_servers:
+        #    temp.append(physical_config.constraint_memory[x])
+        #print temp
+        server_with_most_memory, most_memory = 0, 0
+        for s in candidate_servers:
+            if physical_config.constraint_memory[s] > most_memory:
+                server_with_most_memory, most_memory = s, physical_config.constraint_memory[s]
+                
+        physical_config.constraint_cpu[server_with_most_memory] -= vm_consumption[vm][0]
+        physical_config.constraint_memory[server_with_most_memory] -= vm_consumption[vm][1]
+        operations.append([vm, server_with_most_memory])
+
+        
+    print "final operations", operations
+
+        
+
+
 # the firt main interface
 def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config):
     num_top_noisy_vms = 10
@@ -300,5 +330,8 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
     print "begin set_and_solve_problem"
     placement = set_and_solve_problem(num_top_noisy_vms, busy_vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed)
 
-    print process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placement, physical_config.num_racks)
+    migrate_to_rack = process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placement, physical_config.num_racks)
+    #print migrate_to_rack
+    migrate_to_server = choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config)
     
+    return migrate_to_server
