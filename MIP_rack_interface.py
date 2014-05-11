@@ -104,8 +104,7 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
 
 
 
-
-def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, physical_config, link_capacity_consumed):
+def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed, cost_migration):
     p.set_problem_name("OpenStack VM placement")
     p.objective.set_sense(p.objective.sense.minimize)
 
@@ -117,9 +116,11 @@ def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, physical_con
     # ====================
     
     # the objectiv is to be refined
-    # TODO
     objective = [0 for k in range(M*N+M*(M-1)/2*N*N+physical_config.num_links*2)]
     objective.append(1)
+    for k in range(M):
+        server = original_placement[k]
+        objective[N*k + server] = -cost_migration
 
 
     # ====================
@@ -169,15 +170,15 @@ def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, physical_con
 
 
 # the second main interface
-def set_and_solve_problem(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed = []):
+def set_and_solve_problem(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, cost_migration, link_capacity_consumed = []):
     M = num_vms
     N = physical_config
     
     placement = cplex.Cplex()
-    set_problem_data(placement, M, vm_consumption, vm_traffic_matrix, physical_config, link_capacity_consumed)
+    set_problem_data(placement, M, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed, cost_migration)
     
     # try to tune
-    placement.parameters.timelimit.set(1500.0)
+    placement.parameters.timelimit.set(60.0)
     #placement.parameters.threads.set(1)
     placement.parameters.emphasis.mip.set(1)
     placement.parameters.emphasis.memory.set(1)
@@ -300,7 +301,9 @@ def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
 
 # the firt main interface
 def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config):
+    # adjustable parameters
     num_top_noisy_vms = 10
+    cost_migration = 0
 
     most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, num_top_noisy_vms)
 
@@ -328,7 +331,7 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
     print "traffic on each link: ", link_state
 
     print "begin set_and_solve_problem"
-    placement = set_and_solve_problem(num_top_noisy_vms, busy_vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed)
+    placement = set_and_solve_problem(num_top_noisy_vms, busy_vm_consumption, vm_traffic_matrix, original_placement, physical_config, cost_migration, link_capacity_consumed)
 
     migrate_to_rack = process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placement, physical_config.num_racks)
     #print migrate_to_rack
