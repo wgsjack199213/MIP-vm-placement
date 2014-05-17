@@ -209,20 +209,34 @@ def set_and_solve_problem(num_vms, vm_consumption, vm_traffic_matrix, original_p
 
 
 
-def select_most_noisy_vms(num_vms, traffic_matrix, num_top_noisy_vms):
+def select_most_noisy_vms(num_vms, traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms):
     traffic = [0 for k in range(num_vms)]
     for k in range(num_vms):
         for i in range(num_vms):
+            if physical_config.which_rack[original_placement[k]] == physical_config.which_rack[original_placement[i]]:
+                continue
             traffic[k] += traffic_matrix[k][i]
-
+    # the list traffic is INDEED the traffic each vm contributes on each link
     ans = []
     indice = []
-    traffic_copy = traffic[:]
-    for i in xrange(num_top_noisy_vms):
-        tmp = max(traffic_copy)
-        ans.append(tmp)
-        indice.append(traffic.index(tmp))
-        traffic_copy.remove(tmp)
+    traffic_copy, traffic_copy_for_search_index = traffic[:], traffic[:]
+
+    loop_variable = num_top_noisy_vms
+    while loop_variable > 0 and traffic_copy != []:
+        tmp_max = max(traffic_copy)
+        index_max = traffic_copy_for_search_index.index(tmp_max)
+        if index_max in fixed_vms:     # we do not count(choose) the vms that should be fixed
+            # TODO
+            print index_max, "can not be moved!"
+            traffic_copy.remove(tmp_max)
+            traffic_copy_for_search_index[index_max] = -1
+            continue
+        ans.append(tmp_max)
+        indice.append(index_max)
+        traffic_copy.remove(tmp_max)
+        traffic_copy_for_search_index[index_max] = -1
+        loop_variable -= 1
+
     #print ans, indice
     return indice
 
@@ -260,12 +274,12 @@ def process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placem
     print most_noisy_vms
     for k in range(num_top_noisy_vms):
         vm = most_noisy_vms[k]
-        if 1 == sol.get_values(original_placement[k] + k*num_racks):
+        if 1 == sol.get_values(original_placement[vm] + k*num_racks):
             print vm, ": stays in ", original_placement[vm]
         else:
             for i in range(num_racks):
                 #print sol.get_values(k*num_racks + i)
-                if 1 ==  sol.get_values(k*num_racks + i):
+                if 1 == sol.get_values(k*num_racks + i):
                     print vm, ": originally in ", original_placement[vm], ", now moves to", i
                     migration_operations.append([vm, i])
                     break
@@ -305,12 +319,12 @@ def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
 
 
 # the firt main interface
-def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config):
+def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, fixed_vms = []):
     # adjustable parameters
-    num_top_noisy_vms = 10
+    num_top_noisy_vms = 1
     cost_migration = 0
 
-    most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, num_top_noisy_vms)
+    most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms)
 
     # only consider the most busiest vms
     busy_vm_consumption = []
