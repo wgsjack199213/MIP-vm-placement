@@ -21,6 +21,11 @@ num_vms = num_vms_per_server * num_servers
 
 vm_memory_scale = [512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
 vm_cpu_scale = [1, 2, 4, 8, 11]
+vm_disk_scale = [40, 80, 160, 200, 250, 2000]
+
+server_max_memory = 128000
+server_max_cpu = 12
+server_max_disk = 2000
 
 random_bandwidth_upper_bound = 200
 
@@ -59,16 +64,18 @@ def create_physical_config_instance():
             which_rack.append(k)
     #print "which rack", which_rack
 
-    constraint_cpu = [12 for k in range(num_servers)]
+    constraint_cpu = [server_max_cpu for k in range(num_servers)]
     #print "constraint on cpus", constraint_cpu
 
-    constraint_memory = [128000 for k in range(num_servers)]
+    constraint_memory = [server_max_memory for k in range(num_servers)]
     #print "constraint on memory", constraint_memory
+    
+    constraint_disk = [server_max_disk for k in range(num_servers)]
 
     link_capacity = [10000 for k in range(num_links)]
     #print "link capacity", link_capacity
     
-    config = PhysicalConfig(num_servers = num_servers, num_racks = num_racks, which_rack = which_rack, constraint_cpu = constraint_cpu, constraint_memory = constraint_memory, num_links = num_links, link_capacity = link_capacity)
+    config = PhysicalConfig(num_servers = num_servers, num_racks = num_racks, which_rack = which_rack, constraint_cpu = constraint_cpu, constraint_memory = constraint_memory, constraint_disk = constraint_disk, num_links = num_links, link_capacity = link_capacity)
     return config
 
 
@@ -79,7 +86,9 @@ def generate_vm_consumption():
     for k in range(num_vms):
         cpu = vm_cpu_scale[random.randint(0, 2)]
         memory = vm_memory_scale[random.randint(0, 6)]
-        vm_consumption.append([cpu, memory])
+        disk = vm_disk_scale[random.randint(0, 4)]
+
+        vm_consumption.append([cpu, memory, disk])
     #print "vm consumption", vm_consumption
     return vm_consumption
 

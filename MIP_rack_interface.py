@@ -40,13 +40,17 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
         variables = []
         cpu_coefficient = []
         memory_coefficient = []
+        disk_coefficient = []
         for i in range(M):
             variables.append("x_{0}_{1}".format(i, j))
             cpu_coefficient.append(vm_consumption[i][0])
             memory_coefficient.append(vm_consumption[i][1])
+            disk_coefficient.append(vm_consumption[i][2])
 
         rows.append([variables, cpu_coefficient])
         rows.append([variables, memory_coefficient])
+        rows.append([variables, disk_coefficient])
+
 
     # computation of l variables (traffic on each link)
     for i in range(physical_config.num_links):
@@ -80,7 +84,7 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
         placement_constraints += [0, 0, 1]
     for k in range(N):
     # TODO
-        placement_constraints += [physical_config.constraint_rack_cpu[k], physical_config.constraint_rack_memory[k]]
+        placement_constraints += [physical_config.constraint_rack_cpu[k], physical_config.constraint_rack_memory[k], physical_config.constraint_rack_disk[k]]
 
     if link_capacity_consumed == []:
         link_capacity_consumed = [0 for k in range(physical_config.num_links)]
@@ -94,7 +98,7 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
 
 
     placement_senses = 'E' * M + 'GGL' * (M*(M-1)*N*N/2)       # E means 'equal'  
-    placement_senses += 'L' * (2*N)
+    placement_senses += 'L' * (3*N)     #resources
     placement_senses += 'E' * physical_config.num_links
     placement_senses += 'L' * physical_config.num_links
     #print placement_constraints
@@ -275,7 +279,7 @@ def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
         vm, rack = migration[0], migration[1]
         candidate_servers = []
         for server in physical_config.rack_user_servers[rack]:
-            if physical_config.constraint_cpu[server] > vm_consumption[vm][0] and physical_config.constraint_memory[server] > vm_consumption[vm][1]:
+            if physical_config.constraint_cpu[server] > vm_consumption[vm][0] and physical_config.constraint_memory[server] > vm_consumption[vm][1] and physical_config.constraint_disk[server] > vm_consumption[vm][2]:
                 candidate_servers.append(server)
 
         #candidate_servers = sorted(candidate_servers, cmp=lambda x,y : cmp(physical_config.constraint_memory[y], physical_config.constraint_memory[x]))
@@ -291,11 +295,12 @@ def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
                 
         physical_config.constraint_cpu[server_with_most_memory] -= vm_consumption[vm][0]
         physical_config.constraint_memory[server_with_most_memory] -= vm_consumption[vm][1]
+        physical_config.constraint_disk[server_with_most_memory] -= vm_consumption[vm][2]
         operations.append([vm, server_with_most_memory])
 
         
     print "final operations", operations
-
+    return operations
         
 
 
@@ -318,6 +323,7 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
             continue
         physical_config.constraint_cpu[original_placement[k]] -= vm_consumption[k][0]
         physical_config.constraint_memory[original_placement[k]] -= vm_consumption[k][1]
+        physical_config.constraint_disk[original_placement[k]] -= vm_consumption[k][2]
     #print "constraint on cpus", physical_config.constraint_cpu
     #print "constraint on memory", physical_config.constraint_memory
     physical_config.compute_available_rack_resource()
