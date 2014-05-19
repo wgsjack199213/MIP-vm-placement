@@ -3,18 +3,18 @@ NAME          OpenStack VM placement
 ROWS
  N  obj         
  E  c1          
- L  c2          
- L  c3          
- L  c4          
+ E  c2          
+ G  c3          
+ G  c4          
  L  c5          
- L  c6          
- L  c7          
+ G  c6          
+ G  c7          
  L  c8          
- L  c9          
- L  c10         
+ G  c9          
+ G  c10         
  L  c11         
- L  c12         
- L  c13         
+ G  c12         
+ G  c13         
  L  c14         
  L  c15         
  L  c16         
@@ -22,196 +22,90 @@ ROWS
  L  c18         
  L  c19         
  L  c20         
- L  c21         
- L  c22         
+ E  c21         
+ E  c22         
  L  c23         
  L  c24         
- L  c25         
- L  c26         
- L  c27         
- L  c28         
- L  c29         
- L  c30         
- L  c31         
- L  c32         
- L  c33         
- L  c34         
- L  c35         
- L  c36         
- L  c37         
- E  c38         
- E  c39         
- E  c40         
- E  c41         
- E  c42         
- E  c43         
- E  c44         
- E  c45         
- E  c46         
- E  c47         
- E  c48         
- E  c49         
- L  c50         
- L  c51         
- L  c52         
- L  c53         
- L  c54         
- L  c55         
- L  c56         
- L  c57         
- L  c58         
- L  c59         
- L  c60         
- L  c61         
 COLUMNS
     MARK0000  'MARKER'                 'INTORG'
     x_0_0         c1                                  1
-    x_0_0         c2                                  2
-    x_0_0         c3                                512
-    x_0_0         c4                                 40
+    x_0_0         c3                                  1
+    x_0_0         c5                                  1
+    x_0_0         c6                                  1
+    x_0_0         c8                                  1
+    x_0_0         c15                                 2
+    x_0_0         c16                              2048
+    x_0_0         c17                               250
     x_0_1         c1                                  1
-    x_0_1         c5                                  2
-    x_0_1         c6                                512
-    x_0_1         c7                                 40
-    x_0_2         c1                                  1
-    x_0_2         c8                                  2
-    x_0_2         c9                                512
-    x_0_2         c10                                40
-    x_0_3         c1                                  1
-    x_0_3         c11                                 2
-    x_0_3         c12                               512
-    x_0_3         c13                                40
-    x_0_4         c1                                  1
-    x_0_4         c14                                 2
-    x_0_4         c15                               512
-    x_0_4         c16                                40
-    x_0_5         c1                                  1
-    x_0_5         c17                                 2
-    x_0_5         c18                               512
-    x_0_5         c19                                40
-    x_0_6         c1                                  1
-    x_0_6         c20                                 2
-    x_0_6         c21                               512
-    x_0_6         c22                                40
-    x_0_7         c1                                  1
-    x_0_7         c23                                 2
-    x_0_7         c24                               512
-    x_0_7         c25                                40
-    x_0_8         c1                                  1
-    x_0_8         c26                                 2
-    x_0_8         c27                               512
-    x_0_8         c28                                40
-    x_0_9         c1                                  1
-    x_0_9         c29                                 2
-    x_0_9         c30                               512
-    x_0_9         c31                                40
-    x_0_10        c1                                  1
-    x_0_10        c32                                 2
-    x_0_10        c33                               512
-    x_0_10        c34                                40
-    x_0_11        c1                                  1
-    x_0_11        c35                                 2
-    x_0_11        c36                               512
-    x_0_11        c37                                40
+    x_0_1         c9                                  1
+    x_0_1         c11                                 1
+    x_0_1         c12                                 1
+    x_0_1         c14                                 1
+    x_0_1         c18                                 2
+    x_0_1         c19                              2048
+    x_0_1         c20                               250
+    x_1_0         c2                                  1
+    x_1_0         c4                                  1
+    x_1_0         c5                                  1
+    x_1_0         c10                                 1
+    x_1_0         c11                                 1
+    x_1_0         c15                                 4
+    x_1_0         c16                              2048
+    x_1_0         c17                               160
+    x_1_1         c2                                  1
+    x_1_1         c7                                  1
+    x_1_1         c8                                  1
+    x_1_1         c13                                 1
+    x_1_1         c14                                 1
+    x_1_1         c18                                 4
+    x_1_1         c19                              2048
+    x_1_1         c20                               160
+    y_0_1_0_0     c3                                 -1
+    y_0_1_0_0     c4                                 -1
+    y_0_1_0_0     c5                                 -1
+    y_0_1_0_1     c6                                 -1
+    y_0_1_0_1     c7                                 -1
+    y_0_1_0_1     c8                                 -1
+    y_0_1_0_1     c21                           1000000
+    y_0_1_0_1     c22                           1000000
+    y_0_1_1_0     c9                                 -1
+    y_0_1_1_0     c10                                -1
+    y_0_1_1_0     c11                                -1
+    y_0_1_1_0     c21                           1000000
+    y_0_1_1_0     c22                           1000000
+    y_0_1_1_1     c12                                -1
+    y_0_1_1_1     c13                                -1
+    y_0_1_1_1     c14                                -1
     MARK0001  'MARKER'                 'INTEND'
-    l_0           c38                                -1
-    l_0           c50                                 1
-    l_1           c39                                -1
-    l_1           c51                                 1
-    l_2           c40                                -1
-    l_2           c52                                 1
-    l_3           c41                                -1
-    l_3           c53                                 1
-    l_4           c42                                -1
-    l_4           c54                                 1
-    l_5           c43                                -1
-    l_5           c55                                 1
-    l_6           c44                                -1
-    l_6           c56                                 1
-    l_7           c45                                -1
-    l_7           c57                                 1
-    l_8           c46                                -1
-    l_8           c58                                 1
-    l_9           c47                                -1
-    l_9           c59                                 1
-    l_10          c48                                -1
-    l_10          c60                                 1
-    l_11          c49                                -1
-    l_11          c61                                 1
+    l_0           c21                                -1
+    l_0           c23                                 1
+    l_1           c22                                -1
+    l_1           c24                                 1
     z_0           obj                                 0
     z_1           obj                                 0
-    z_2           obj                                 0
-    z_3           obj                                 0
-    z_4           obj                                 0
-    z_5           obj                                 0
-    z_6           obj                                 0
-    z_7           obj                                 0
-    z_8           obj                                 0
-    z_9           obj                                 0
-    z_10          obj                                 0
-    z_11          obj                                 0
     heavest_link  obj                                 1
-    heavest_link  c50                                -1
-    heavest_link  c51                                -1
-    heavest_link  c52                                -1
-    heavest_link  c53                                -1
-    heavest_link  c54                                -1
-    heavest_link  c55                                -1
-    heavest_link  c56                                -1
-    heavest_link  c57                                -1
-    heavest_link  c58                                -1
-    heavest_link  c59                                -1
-    heavest_link  c60                                -1
-    heavest_link  c61                                -1
+    heavest_link  c23                                -1
+    heavest_link  c24                                -1
 RHS
     rhs           c1                                  1
-    rhs           c2                                 41
-    rhs           c3                            1471488
-    rhs           c4                              20510
-    rhs           c5                                 51
-    rhs           c6                            1316864
-    rhs           c7                              21130
-    rhs           c8                                 33
-    rhs           c9                            1263104
-    rhs           c10                             21180
-    rhs           c11                                39
-    rhs           c12                           1421312
-    rhs           c13                             20670
-    rhs           c14                                26
-    rhs           c15                           1482240
-    rhs           c16                             21320
-    rhs           c17                                40
-    rhs           c18                           1158144
-    rhs           c19                             20380
-    rhs           c20                                39
-    rhs           c21                           1159680
-    rhs           c22                             21040
-    rhs           c23                                35
-    rhs           c24                           1247744
-    rhs           c25                             21440
-    rhs           c26                                36
-    rhs           c27                           1215488
-    rhs           c28                             20570
-    rhs           c29                                38
-    rhs           c30                           1474048
-    rhs           c31                             22170
-    rhs           c32                                38
-    rhs           c33                           1335808
-    rhs           c34                             23540
-    rhs           c35                                51
-    rhs           c36                           1393664
-    rhs           c37                             21100
+    rhs           c2                                  1
+    rhs           c5                                  1
+    rhs           c8                                  1
+    rhs           c11                                 1
+    rhs           c14                                 1
+    rhs           c15                                12
+    rhs           c16                            128000
+    rhs           c17                              2000
+    rhs           c18                                12
+    rhs           c19                            128000
+    rhs           c20                              2000
 BOUNDS
  UP bnd           x_0_0                               1
  UP bnd           x_0_1                               1
- UP bnd           x_0_2                               1
- UP bnd           x_0_3                               1
- UP bnd           x_0_4                               1
- UP bnd           x_0_5                               1
- UP bnd           x_0_6                               1
- UP bnd           x_0_7                               1
- UP bnd           x_0_8                               1
- UP bnd           x_0_9                               1
- UP bnd           x_0_10                              1
- UP bnd           x_0_11                              1
+ UP bnd           x_1_0                               1
+ UP bnd           x_1_1                               1
+ UP bnd           y_0_1_0_0                           1
+ UP bnd           y_0_1_0_1                           1
+ UP bnd           y_0_1_1_0                           1
+ UP bnd           y_0_1_1_1                           1
 ENDATA

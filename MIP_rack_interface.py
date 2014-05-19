@@ -7,10 +7,21 @@ import cplex
 import random
 
 
+def compute_two_kinds_of_traffic(M, rack, vm_mobile, physical_config, num_all_vms, most_noisy_vms, vm_traffic_matrix):
+    traffic_fixed_on_rack, traffic_fixed_out_of_rack = 0, 0
+    
+    for j in range(num_all_vms):
+        if j in most_noisy_vms:
+            continue
+    #    if physical_config.which
+        
+    return 2, 3
+
+
 # ====================
 # constraints
 # ====================
-def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_capacity_consumed, physical_config):
+def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_capacity_consumed, physical_config, num_all_vms, most_noisy_vms):
     M = num_vms
     N = physical_config.num_racks
 
@@ -56,6 +67,8 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
     for i in range(physical_config.num_links):
         variables = []
         coefficient = []
+
+        # between "can move" and "can move"
         for p in range(M):
             # to avoid duplicately adding y variable into rows, we consider pair by pair
             # switching p and q
@@ -69,6 +82,17 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
                         variables.append("y_{0}_{1}_{2}_{3}".format(p, q, s, j))
                         coefficient.append(vm_traffic_matrix[p][q])
                         coefficient.append(vm_traffic_matrix[p][q])
+
+        # between "can move" and "fixed"
+        for p in range(M):
+            # compute two kinds of traffic
+            traffic_j_on_i, traffic_j_out_of_i = compute_two_kinds_of_traffic(M, i, p, physical_config, num_all_vms, most_noisy_vms, vm_traffic_matrix)
+
+
+            
+
+
+
         variables.append("l_{0}".format(i))
         coefficient.append(-1)
         rows.append([variables, coefficient])
@@ -108,7 +132,7 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
 
 
 
-def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed, cost_migration):
+def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed, cost_migration, num_all_vms, most_noisy_vms):
     p.set_problem_name("OpenStack VM placement")
     p.objective.set_sense(p.objective.sense.minimize)
 
@@ -123,8 +147,8 @@ def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, original_pla
     objective = [0 for k in range(M*N+M*(M-1)/2*N*N+physical_config.num_links*2)]
     objective.append(1)
     for k in range(M):
-        server = original_placement[k]
-        objective[N*k + server] = -cost_migration
+        rack = original_placement[most_noisy_vms[k]]
+        objective[N*k + rack] = -cost_migration
 
 
     # ====================
@@ -167,19 +191,19 @@ def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, original_pla
 
     p.variables.add(obj = objective, lb = lower_bound, ub = upper_bound, types = variable_types, names = names)
 
-    add_constraints(p, M, vm_consumption, vm_traffic_matrix, link_capacity_consumed, physical_config)
+    add_constraints(p, M, vm_consumption, vm_traffic_matrix, link_capacity_consumed, physical_config, num_all_vms, most_noisy_vms)
 
     print "the problem data has been set!"
 
 
 
 # the second main interface
-def set_and_solve_problem(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, cost_migration, link_capacity_consumed = []):
+def set_and_solve_problem(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, cost_migration, num_all_vms, most_noisy_vms, link_capacity_consumed = []):
     M = num_vms
     N = physical_config
     
     placement = cplex.Cplex()
-    set_problem_data(placement, M, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed, cost_migration)
+    set_problem_data(placement, M, vm_consumption, vm_traffic_matrix, original_placement, physical_config, link_capacity_consumed, cost_migration, num_all_vms, most_noisy_vms)
     
     # try to tune
     placement.parameters.timelimit.set(60.0)
@@ -210,6 +234,9 @@ def set_and_solve_problem(num_vms, vm_consumption, vm_traffic_matrix, original_p
 
 
 def select_most_noisy_vms(num_vms, traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms):
+    return [0, 1]
+
+
     traffic = [0 for k in range(num_vms)]
     for k in range(num_vms):
         for i in range(num_vms):
@@ -225,12 +252,12 @@ def select_most_noisy_vms(num_vms, traffic_matrix, original_placement, physical_
     while loop_variable > 0 and traffic_copy != []:
         tmp_max = max(traffic_copy)
         index_max = traffic_copy_for_search_index.index(tmp_max)
-        if index_max in fixed_vms:     # we do not count(choose) the vms that should be fixed
-            # TODO
-            print index_max, "can not be moved!"
-            traffic_copy.remove(tmp_max)
-            traffic_copy_for_search_index[index_max] = -1
-            continue
+        #if index_max in fixed_vms:     # we do not count(choose) the vms that should be fixed
+        #    # TODO
+        #    print index_max, "can not be moved!========================================="
+        #    traffic_copy.remove(tmp_max)
+        #    traffic_copy_for_search_index[index_max] = -1
+        #    continue
         ans.append(tmp_max)
         indice.append(index_max)
         traffic_copy.remove(tmp_max)
@@ -263,6 +290,26 @@ def process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placem
     migration_operations = []
 
     sol = placement.solution
+
+
+# TODO this is debugging
+    numcols = placement.variables.get_num()
+    numrows = placement.linear_constraints.get_num()
+
+    slack = sol.get_linear_slacks()
+    x     = sol.get_values()
+
+    for j in range(numcols):
+        print "Column %d:  Value = %10f" % (j, x[j])
+
+
+
+
+
+
+
+
+
 
     # solution.get_status() returns an integer code
     print "Solution status = " , sol.get_status(), ":",
@@ -321,7 +368,7 @@ def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
 # the firt main interface
 def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, fixed_vms = []):
     # adjustable parameters
-    num_top_noisy_vms = 1
+    num_top_noisy_vms = 2
     cost_migration = 0
 
     most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms)
@@ -351,7 +398,7 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
     print "traffic on each link: ", link_state
 
     print "begin set_and_solve_problem"
-    placement = set_and_solve_problem(num_top_noisy_vms, busy_vm_consumption, vm_traffic_matrix, original_placement, physical_config, cost_migration, link_capacity_consumed)
+    placement = set_and_solve_problem(num_top_noisy_vms, busy_vm_consumption, vm_traffic_matrix, original_placement, physical_config, cost_migration, num_vms, most_noisy_vms, link_capacity_consumed)
 
     migrate_to_rack = process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placement, physical_config.num_racks)
     #print migrate_to_rack
