@@ -7,7 +7,7 @@ from MIP_rack_interface import migrate_policy
 
 # num_racks is the number of racks
 # num_server_per_rack in the number of servers in each rack
-num_racks = 2
+num_racks = 5
 num_server_per_rack = 1
 num_servers = num_racks * num_server_per_rack 
 
@@ -45,7 +45,7 @@ def create_traffic_matrix():
                 row.append(0)
             else:
                 # create a burst
-                if k == 0 and i == num_vms-1:
+                if k == 1 and i == num_vms-1:
                     row.append(1000000)
                 elif busy_flag:
                     row.append(random.randint(random_bandwidth_upper_bound * 3 / 4, random_bandwidth_upper_bound))
@@ -58,7 +58,7 @@ def create_traffic_matrix():
     #f.close()
 
     #print "the traffic matrix: "
-    #print t
+    print t
     return t
 
 def create_physical_config_instance():
@@ -116,4 +116,4 @@ if __name__ == "__main__":
     test_config = create_physical_config_instance()
     
     print "migrate_policy is being called..."
-    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, fixed_vms = [(num_vms - 1)])
+    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 5, [1, 4])

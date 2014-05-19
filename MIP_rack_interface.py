@@ -7,21 +7,24 @@ import cplex
 import random
 
 
-def compute_two_kinds_of_traffic(M, rack, vm_mobile, physical_config, num_all_vms, most_noisy_vms, vm_traffic_matrix):
+def compute_two_kinds_of_traffic(M, rack, vm_mobile, physical_config, num_all_vms, most_noisy_vms, original_placement, vm_traffic_matrix):
     traffic_fixed_on_rack, traffic_fixed_out_of_rack = 0, 0
     
     for j in range(num_all_vms):
         if j in most_noisy_vms:
             continue
-    #    if physical_config.which
+        if physical_config.which_rack[original_placement[j]] == rack:
+            traffic_fixed_on_rack += vm_traffic_matrix[vm_mobile][j]
+        else:
+            traffic_fixed_out_of_rack += vm_traffic_matrix[vm_mobile][j]
         
-    return 2, 3
+    return traffic_fixed_on_rack, traffic_fixed_out_of_rack
 
 
 # ====================
 # constraints
 # ====================
-def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_capacity_consumed, physical_config, num_all_vms, most_noisy_vms):
+def add_constraints(problem, num_vms, vm_consumption, original_placement, vm_traffic_matrix, link_capacity_consumed, physical_config, num_all_vms, most_noisy_vms):
     M = num_vms
     N = physical_config.num_racks
 
@@ -64,6 +67,7 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
 
 
     # computation of l variables (traffic on each link)
+    constant_term_mobile_and_fixed = 0
     for i in range(physical_config.num_links):
         variables = []
         coefficient = []
@@ -86,10 +90,11 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
         # between "can move" and "fixed"
         for p in range(M):
             # compute two kinds of traffic
-            traffic_j_on_i, traffic_j_out_of_i = compute_two_kinds_of_traffic(M, i, p, physical_config, num_all_vms, most_noisy_vms, vm_traffic_matrix)
+            traffic_j_on_i, traffic_j_out_of_i = compute_two_kinds_of_traffic(M, i, p, physical_config, num_all_vms, most_noisy_vms, original_placement, vm_traffic_matrix)
+            variables.append("x_{0}_{1}".format(p, i))
+            coefficient.append(traffic_j_out_of_i - traffic_j_on_i)
 
-
-            
+            constant_term_mobile_and_fixed += traffic_j_on_i
 
 
 
@@ -113,7 +118,7 @@ def add_constraints(problem, num_vms, vm_consumption, vm_traffic_matrix, link_ca
     if link_capacity_consumed == []:
         link_capacity_consumed = [0 for k in range(physical_config.num_links)]
     for k in range(physical_config.num_links):
-        placement_constraints += [ -link_capacity_consumed[k] ]
+        placement_constraints += [ -link_capacity_consumed[k]-constant_term_mobile_and_fixed ]
 
     # to minimize the max
     for k in range(physical_config.num_links):
@@ -191,7 +196,7 @@ def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, original_pla
 
     p.variables.add(obj = objective, lb = lower_bound, ub = upper_bound, types = variable_types, names = names)
 
-    add_constraints(p, M, vm_consumption, vm_traffic_matrix, link_capacity_consumed, physical_config, num_all_vms, most_noisy_vms)
+    add_constraints(p, M, vm_consumption, original_placement, vm_traffic_matrix, link_capacity_consumed, physical_config, num_all_vms, most_noisy_vms)
 
     print "the problem data has been set!"
 
@@ -234,8 +239,7 @@ def set_and_solve_problem(num_vms, vm_consumption, vm_traffic_matrix, original_p
 
 
 def select_most_noisy_vms(num_vms, traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms):
-    return [0, 1]
-
+    #return [0, 1]
 
     traffic = [0 for k in range(num_vms)]
     for k in range(num_vms):
@@ -252,19 +256,20 @@ def select_most_noisy_vms(num_vms, traffic_matrix, original_placement, physical_
     while loop_variable > 0 and traffic_copy != []:
         tmp_max = max(traffic_copy)
         index_max = traffic_copy_for_search_index.index(tmp_max)
-        #if index_max in fixed_vms:     # we do not count(choose) the vms that should be fixed
-        #    # TODO
-        #    print index_max, "can not be moved!========================================="
-        #    traffic_copy.remove(tmp_max)
-        #    traffic_copy_for_search_index[index_max] = -1
-        #    continue
+        
+        if index_max in fixed_vms:     # we do not count(choose) the vms that should be fixed
+            # TODO
+            print index_max, "can not be moved!========================================="
+            traffic_copy.remove(tmp_max)
+            traffic_copy_for_search_index[index_max] = -1
+            continue
         ans.append(tmp_max)
         indice.append(index_max)
         traffic_copy.remove(tmp_max)
         traffic_copy_for_search_index[index_max] = -1
         loop_variable -= 1
 
-    #print ans, indice
+    print ans, indice
     return indice
 
 # for debug
@@ -299,14 +304,8 @@ def process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placem
     slack = sol.get_linear_slacks()
     x     = sol.get_values()
 
-    for j in range(numcols):
-        print "Column %d:  Value = %10f" % (j, x[j])
-
-
-
-
-
-
+    #for j in range(numcols):
+    #    print "Column %d:  Value = %10f" % (j, x[j])
 
 
 
@@ -366,12 +365,14 @@ def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
 
 
 # the firt main interface
-def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, fixed_vms = []):
+def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms = 2, fixed_vms = []):
     # adjustable parameters
-    num_top_noisy_vms = 2
+    #num_top_noisy_vms = 2
     cost_migration = 0
 
     most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms)
+    if len(most_noisy_vms) < num_vms:
+        num_top_noisy_vms = len(most_noisy_vms)
 
     # only consider the most busiest vms
     busy_vm_consumption = []
@@ -391,6 +392,7 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
 
     # compute how much capacity has been used in each link
     link_capacity_consumed = compute_link_used_capacity(num_vms, original_placement, vm_traffic_matrix, most_noisy_vms, physical_config)
+    print "link_capacity_consumed:", link_capacity_consumed
 
     # compute current state of each link
     no_vms = []
