@@ -67,34 +67,48 @@ def add_constraints(problem, num_vms, vm_consumption, original_placement, vm_tra
 
 
     # computation of l variables (traffic on each link)
-    constant_term_mobile_and_fixed = 0
+    constant_term_mobile_and_fixed_list = [0 for k in range(physical_config.num_links)]
+
     for i in range(physical_config.num_links):
         variables = []
         coefficient = []
 
+        coefficient_list_for_x_pi = [0 for ii in range(M)]
+
         # between "can move" and "can move"
+#        for p in range(M):
+#            # to avoid duplicately adding y variable into rows, we consider pair by pair
+#            # switching p and q
+#            for q in range(p+1, M):
+#                # now p < q 
+#                for j in range(N): 
+#                    for s in range(j+1, N):
+#                        if s == j:
+#                            continue
+#                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, j, s))
+#                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, s, j))
+#                        coefficient.append(vm_traffic_matrix[p][q])
+#                        coefficient.append(vm_traffic_matrix[p][q])
+
         for p in range(M):
             # to avoid duplicately adding y variable into rows, we consider pair by pair
-            # switching p and q
             for q in range(p+1, M):
-                # now p < q 
-                for j in range(N): 
-                    for s in range(j+1, N):
-                        if s == j:
-                            continue
-                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, j, s))
-                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, s, j))
-                        coefficient.append(vm_traffic_matrix[p][q])
-                        coefficient.append(vm_traffic_matrix[p][q])
+                # now p < q
+                variables.append("y_{0}_{1}_{2}_{3}".format(p, q, i, i))
+                coefficient.append(-vm_traffic_matrix[p][q])          
+                coefficient_list_for_x_pi[p] += vm_traffic_matrix[p][q]
+                coefficient_list_for_x_pi[q] += vm_traffic_matrix[p][q]
+
+
 
         # between "can move" and "fixed"
         for p in range(M):
             # compute two kinds of traffic
             traffic_j_on_i, traffic_j_out_of_i = compute_two_kinds_of_traffic(M, i, p, physical_config, num_all_vms, most_noisy_vms, original_placement, vm_traffic_matrix)
             variables.append("x_{0}_{1}".format(p, i))
-            coefficient.append(traffic_j_out_of_i - traffic_j_on_i)
+            coefficient.append(traffic_j_out_of_i - traffic_j_on_i + coefficient_list_for_x_pi[p])
 
-            constant_term_mobile_and_fixed += traffic_j_on_i
+            constant_term_mobile_and_fixed_list[i] += traffic_j_on_i
 
 
 
@@ -117,8 +131,10 @@ def add_constraints(problem, num_vms, vm_consumption, original_placement, vm_tra
 
     if link_capacity_consumed == []:
         link_capacity_consumed = [0 for k in range(physical_config.num_links)]
+
+    # the rhs of traffic on each link
     for k in range(physical_config.num_links):
-        placement_constraints += [ -link_capacity_consumed[k]-constant_term_mobile_and_fixed ]
+        placement_constraints += [ -link_capacity_consumed[k]-constant_term_mobile_and_fixed_list[k] ]
 
     # to minimize the max
     for k in range(physical_config.num_links):
@@ -304,8 +320,8 @@ def process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placem
     slack = sol.get_linear_slacks()
     x     = sol.get_values()
 
-    #for j in range(numcols):
-    #    print "Column %d:  Value = %10f" % (j, x[j])
+    for j in range(numcols):
+        print "Column %d:  Value = %10f" % (j, x[j])
 
 
 
@@ -342,12 +358,6 @@ def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
             if physical_config.constraint_cpu[server] > vm_consumption[vm][0] and physical_config.constraint_memory[server] > vm_consumption[vm][1] and physical_config.constraint_disk[server] > vm_consumption[vm][2]:
                 candidate_servers.append(server)
 
-        #candidate_servers = sorted(candidate_servers, cmp=lambda x,y : cmp(physical_config.constraint_memory[y], physical_config.constraint_memory[x]))
-        #print candidate_servers
-        #temp = []
-        #for x in candidate_servers:
-        #    temp.append(physical_config.constraint_memory[x])
-        #print temp
         server_with_most_memory, most_memory = 0, 0
         for s in candidate_servers:
             if physical_config.constraint_memory[s] > most_memory:

@@ -45,7 +45,7 @@ def create_traffic_matrix():
                 row.append(0)
             else:
                 # create a burst
-                if k == 1 and i == num_vms-1:
+                if k == 0 and i == num_vms-1:
                     row.append(1000000)
                 elif busy_flag:
                     row.append(random.randint(random_bandwidth_upper_bound * 3 / 4, random_bandwidth_upper_bound))
@@ -116,4 +116,4 @@ if __name__ == "__main__":
     test_config = create_physical_config_instance()
     
     print "migrate_policy is being called..."
-    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 5, [1, 4])
+    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 2)
