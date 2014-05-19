@@ -14,9 +14,9 @@ def compute_two_kinds_of_traffic(M, rack, vm_mobile, physical_config, num_all_vm
         if j in most_noisy_vms:
             continue
         if physical_config.which_rack[original_placement[j]] == rack:
-            traffic_fixed_on_rack += vm_traffic_matrix[vm_mobile][j]
+            traffic_fixed_on_rack += vm_traffic_matrix[most_noisy_vms[vm_mobile]][j]
         else:
-            traffic_fixed_out_of_rack += vm_traffic_matrix[vm_mobile][j]
+            traffic_fixed_out_of_rack += vm_traffic_matrix[most_noisy_vms[vm_mobile]][j]
         
     return traffic_fixed_on_rack, traffic_fixed_out_of_rack
 
@@ -94,11 +94,13 @@ def add_constraints(problem, num_vms, vm_consumption, original_placement, vm_tra
             # to avoid duplicately adding y variable into rows, we consider pair by pair
             for q in range(p+1, M):
                 # now p < q
-                variables.append("y_{0}_{1}_{2}_{3}".format(p, q, i, i))
-                coefficient.append(-vm_traffic_matrix[p][q])          
-                coefficient_list_for_x_pi[p] += vm_traffic_matrix[p][q]
-                coefficient_list_for_x_pi[q] += vm_traffic_matrix[p][q]
-
+                variables.append("y_{0}_{1}_{2}_{3}".format(p, q, i, i))     
+                traffic =  vm_traffic_matrix[most_noisy_vms[p]][most_noisy_vms[q]]
+                
+                coefficient.append(-2*traffic) 
+                coefficient_list_for_x_pi[p] += traffic
+                coefficient_list_for_x_pi[q] += traffic
+                
 
 
         # between "can move" and "fixed"
@@ -126,7 +128,6 @@ def add_constraints(problem, num_vms, vm_consumption, original_placement, vm_tra
     for k in range(M*(M-1)*N*N/2):
         placement_constraints += [0, 0, 1]
     for k in range(N):
-    # TODO
         placement_constraints += [physical_config.constraint_rack_cpu[k], physical_config.constraint_rack_memory[k], physical_config.constraint_rack_disk[k]]
 
     if link_capacity_consumed == []:
@@ -169,7 +170,7 @@ def set_problem_data(p, num_vms, vm_consumption, vm_traffic_matrix, original_pla
     objective.append(1)
     for k in range(M):
         rack = original_placement[most_noisy_vms[k]]
-        objective[N*k + rack] = -cost_migration
+        objective[N*k + rack] = -cost_migration[most_noisy_vms[k]]
 
 
     # ====================
@@ -275,7 +276,7 @@ def select_most_noisy_vms(num_vms, traffic_matrix, original_placement, physical_
         
         if index_max in fixed_vms:     # we do not count(choose) the vms that should be fixed
             # TODO
-            print index_max, "can not be moved!========================================="
+            #print index_max, "can not be moved!========================================="
             traffic_copy.remove(tmp_max)
             traffic_copy_for_search_index[index_max] = -1
             continue
@@ -285,7 +286,7 @@ def select_most_noisy_vms(num_vms, traffic_matrix, original_placement, physical_
         traffic_copy_for_search_index[index_max] = -1
         loop_variable -= 1
 
-    print ans, indice
+    #print ans, indice
     return indice
 
 # for debug
@@ -314,14 +315,14 @@ def process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placem
 
 
 # TODO this is debugging
-    numcols = placement.variables.get_num()
-    numrows = placement.linear_constraints.get_num()
-
-    slack = sol.get_linear_slacks()
-    x     = sol.get_values()
-
-    for j in range(numcols):
-        print "Column %d:  Value = %10f" % (j, x[j])
+#    numcols = placement.variables.get_num()
+#    numrows = placement.linear_constraints.get_num()
+#    slack = sol.get_linear_slacks()
+#    x     = sol.get_values()
+#
+#
+#    for j in range(numcols):
+#        print "Column %d:  Value = %10f" % (j, x[j])
 
 
 
@@ -375,10 +376,11 @@ def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
 
 
 # the firt main interface
-def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms = 2, fixed_vms = []):
+def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms = 2, fixed_vms = [], cost_migration = []):
     # adjustable parameters
     #num_top_noisy_vms = 2
-    cost_migration = 0
+    if cost_migration == []:
+        cost_migration = [0 for k in range(num_vms)]
 
     most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms)
     if len(most_noisy_vms) < num_vms:

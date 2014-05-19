@@ -7,15 +7,15 @@ from MIP_rack_interface import migrate_policy
 
 # num_racks is the number of racks
 # num_server_per_rack in the number of servers in each rack
-num_racks = 5
-num_server_per_rack = 1
+num_racks = 12
+num_server_per_rack = 15
 num_servers = num_racks * num_server_per_rack 
 
 # num_links is the number of links (out of racks). 
 # Suppos all racks are linked to a single switch, then num_links is the same with the number of R
 num_links = num_racks
 
-num_vms_per_server = 1
+num_vms_per_server = 4
 
 num_vms = num_vms_per_server * num_servers
 
@@ -58,7 +58,7 @@ def create_traffic_matrix():
     #f.close()
 
     #print "the traffic matrix: "
-    print t
+    #print t
     return t
 
 def create_physical_config_instance():
@@ -116,4 +116,4 @@ if __name__ == "__main__":
     test_config = create_physical_config_instance()
     
     print "migrate_policy is being called..."
-    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 2)
+    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 10, [1, 2, 3])
