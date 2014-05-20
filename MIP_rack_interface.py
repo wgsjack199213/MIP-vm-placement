@@ -273,17 +273,16 @@ def select_most_noisy_vms(num_vms, traffic_matrix, original_placement, physical_
     while loop_variable > 0 and traffic_copy != []:
         tmp_max = max(traffic_copy)
         index_max = traffic_copy_for_search_index.index(tmp_max)
-        
+        traffic_copy.remove(tmp_max)
+        traffic_copy_for_search_index[index_max] = -1
+
         if index_max in fixed_vms:     # we do not count(choose) the vms that should be fixed
             # TODO
             #print index_max, "can not be moved!========================================="
-            traffic_copy.remove(tmp_max)
-            traffic_copy_for_search_index[index_max] = -1
             continue
         ans.append(tmp_max)
         indice.append(index_max)
-        traffic_copy.remove(tmp_max)
-        traffic_copy_for_search_index[index_max] = -1
+        
         loop_variable -= 1
 
     #print ans, indice

@@ -116,4 +116,4 @@ if __name__ == "__main__":
     test_config = create_physical_config_instance()
     
     print "migrate_policy is being called..."
-    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 10, [1, 2, 3])
+    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 10, [1, 719])
