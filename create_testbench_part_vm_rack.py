@@ -106,8 +106,6 @@ def generate_original_placement():
 
 if __name__ == "__main__":
     traffic = create_traffic_matrix()
-    #traffic = [[0, 190, 19, 134, 155, 154, 125, 164, 120, 168, 52, 37], [190, 0, 104, 45, 198, 117, 158, 199, 93, 96, 129, 84], [19, 104, 0, 175, 12, 126, 93, 140, 200, 152, 184, 17], [134, 45, 175, 0, 106, 182, 129, 172, 43, 44, 184, 85], [155, 198, 12, 106, 0, 125, 184, 108, 100, 32, 116, 171], [154, 117, 126, 182, 125, 0, 9, 155, 59, 186, 104, 79], [125, 158, 93, 129, 184, 9, 0, 184, 139, 190, 9, 168], [164, 199, 140, 172, 108, 155, 184, 0, 83, 117, 39, 180], [120, 93, 200, 43, 100, 59, 139, 83, 0, 148, 63, 81], [168, 96, 152, 44, 32, 186, 190, 117, 148, 0, 115, 8], [52, 129, 184, 184, 116, 104, 9, 39, 63, 115, 0, 122], [37, 84, 17, 85, 171, 79, 168, 180, 81, 8, 122, 0]]
-
      
     all_vm_consumption = generate_vm_consumption()
     all_original_placement = generate_original_placement()
@@ -116,4 +114,4 @@ if __name__ == "__main__":
     test_config = create_physical_config_instance()
     
     print "migrate_policy is being called..."
-    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 10, [1, 719])
+    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 10, [5, 719])

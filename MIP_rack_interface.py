@@ -5,6 +5,8 @@ import sys
 sys.path.append('/Users/wgs/projects/IBM/ILOG/CPLEX_Studio126/cplex/python/x86-64_osx/')
 import cplex
 import random
+from vm_selection import select_most_noisy_vms
+from target_server_selection import choose_server_in_rack
 
 
 def compute_two_kinds_of_traffic(M, rack, vm_mobile, physical_config, num_all_vms, most_noisy_vms, original_placement, vm_traffic_matrix):
@@ -74,21 +76,6 @@ def add_constraints(problem, num_vms, vm_consumption, original_placement, vm_tra
         coefficient = []
 
         coefficient_list_for_x_pi = [0 for ii in range(M)]
-
-        # between "can move" and "can move"
-#        for p in range(M):
-#            # to avoid duplicately adding y variable into rows, we consider pair by pair
-#            # switching p and q
-#            for q in range(p+1, M):
-#                # now p < q 
-#                for j in range(N): 
-#                    for s in range(j+1, N):
-#                        if s == j:
-#                            continue
-#                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, j, s))
-#                        variables.append("y_{0}_{1}_{2}_{3}".format(p, q, s, j))
-#                        coefficient.append(vm_traffic_matrix[p][q])
-#                        coefficient.append(vm_traffic_matrix[p][q])
 
         for p in range(M):
             # to avoid duplicately adding y variable into rows, we consider pair by pair
@@ -254,40 +241,6 @@ def set_and_solve_problem(num_vms, vm_consumption, vm_traffic_matrix, original_p
 
 
 
-
-def select_most_noisy_vms(num_vms, traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms):
-    #return [0, 1]
-
-    traffic = [0 for k in range(num_vms)]
-    for k in range(num_vms):
-        for i in range(num_vms):
-            if physical_config.which_rack[original_placement[k]] == physical_config.which_rack[original_placement[i]]:
-                continue
-            traffic[k] += traffic_matrix[k][i]
-    # the list traffic is INDEED the traffic each vm contributes on each link
-    ans = []
-    indice = []
-    traffic_copy, traffic_copy_for_search_index = traffic[:], traffic[:]
-
-    loop_variable = num_top_noisy_vms
-    while loop_variable > 0 and traffic_copy != []:
-        tmp_max = max(traffic_copy)
-        index_max = traffic_copy_for_search_index.index(tmp_max)
-        traffic_copy.remove(tmp_max)
-        traffic_copy_for_search_index[index_max] = -1
-
-        if index_max in fixed_vms:     # we do not count(choose) the vms that should be fixed
-            # TODO
-            #print index_max, "can not be moved!========================================="
-            continue
-        ans.append(tmp_max)
-        indice.append(index_max)
-        
-        loop_variable -= 1
-
-    #print ans, indice
-    return indice
-
 # for debug
 def compute_link_used_capacity(num_vms, original_placement, traffic, most_noisy_vms, config):
     link_used = [0 for k in range(config.num_links)]
@@ -348,29 +301,6 @@ def process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placem
 
     return migration_operations 
 
-
-def choose_server_in_rack(migrate_to_rack, vm_consumption, physical_config):
-    operations = []
-    for migration in migrate_to_rack:
-        vm, rack = migration[0], migration[1]
-        candidate_servers = []
-        for server in physical_config.rack_user_servers[rack]:
-            if physical_config.constraint_cpu[server] > vm_consumption[vm][0] and physical_config.constraint_memory[server] > vm_consumption[vm][1] and physical_config.constraint_disk[server] > vm_consumption[vm][2]:
-                candidate_servers.append(server)
-
-        server_with_most_memory, most_memory = 0, 0
-        for s in candidate_servers:
-            if physical_config.constraint_memory[s] > most_memory:
-                server_with_most_memory, most_memory = s, physical_config.constraint_memory[s]
-                
-        physical_config.constraint_cpu[server_with_most_memory] -= vm_consumption[vm][0]
-        physical_config.constraint_memory[server_with_most_memory] -= vm_consumption[vm][1]
-        physical_config.constraint_disk[server_with_most_memory] -= vm_consumption[vm][2]
-        operations.append([vm, server_with_most_memory])
-
-        
-    print "final operations", operations
-    return operations
         
 
 
@@ -380,6 +310,9 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
     #num_top_noisy_vms = 2
     if cost_migration == []:
         cost_migration = [0 for k in range(num_vms)]
+
+    if num_top_noisy_vms > num_vms:
+        num_top_noisy_vms = num_vms
 
     most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms)
     if len(most_noisy_vms) < num_vms:
@@ -392,8 +325,11 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
         #busy_original_placement.append(original_placement[most_noisy_vms[k]])
 
     for k in range(num_vms):
-        if k in most_noisy_vms:
-            continue
+        # conservatively compute the resource available
+        # because the live migration may not succeed !
+        #if k in most_noisy_vms:
+        #    continue
+
         physical_config.constraint_cpu[original_placement[k]] -= vm_consumption[k][0]
         physical_config.constraint_memory[original_placement[k]] -= vm_consumption[k][1]
         physical_config.constraint_disk[original_placement[k]] -= vm_consumption[k][2]
