@@ -277,8 +277,6 @@ def process_result(placement, num_top_noisy_vms, most_noisy_vms, original_placem
 #        print "Column %d:  Value = %10f" % (j, x[j])
 
 
-
-
     # solution.get_status() returns an integer code
     print "Solution status = " , sol.get_status(), ":",
     # the following line prints the corresponding string
@@ -314,7 +312,12 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
     if num_top_noisy_vms > num_vms:
         num_top_noisy_vms = num_vms
 
-    most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms)
+    # compute current traffic state of each link
+    no_vms = []
+    link_state = compute_link_used_capacity(num_vms, original_placement, vm_traffic_matrix, no_vms, physical_config)
+    print "traffic on each link: ", link_state
+
+    most_noisy_vms = select_most_noisy_vms(num_vms, vm_traffic_matrix, original_placement, physical_config, num_top_noisy_vms, fixed_vms, link_state)
     if len(most_noisy_vms) < num_vms:
         num_top_noisy_vms = len(most_noisy_vms)
 
@@ -324,6 +327,7 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
         busy_vm_consumption.append(vm_consumption[most_noisy_vms[k]])
         #busy_original_placement.append(original_placement[most_noisy_vms[k]])
 
+    # compute the resources that remain
     for k in range(num_vms):
         # conservatively compute the resource available
         # because the live migration may not succeed !
@@ -337,14 +341,9 @@ def migrate_policy(num_vms, vm_consumption, vm_traffic_matrix, original_placemen
     #print "constraint on memory", physical_config.constraint_memory
     physical_config.compute_available_rack_resource()
 
-    # compute how much capacity has been used in each link
+    # compute how much capacity has been used in each link (between fixed vm and fixed vm)
     link_capacity_consumed = compute_link_used_capacity(num_vms, original_placement, vm_traffic_matrix, most_noisy_vms, physical_config)
     print "link_capacity_consumed:", link_capacity_consumed
-
-    # compute current state of each link
-    no_vms = []
-    link_state = compute_link_used_capacity(num_vms, original_placement, vm_traffic_matrix, no_vms, physical_config)
-    print "traffic on each link: ", link_state
 
     print "begin set_and_solve_problem"
     placement = set_and_solve_problem(num_top_noisy_vms, busy_vm_consumption, vm_traffic_matrix, original_placement, physical_config, cost_migration, num_vms, most_noisy_vms, link_capacity_consumed)

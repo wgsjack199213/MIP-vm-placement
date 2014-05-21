@@ -27,7 +27,7 @@ server_max_memory = 128000
 server_max_cpu = 12
 server_max_disk = 2000
 
-random_bandwidth_upper_bound = 0#20
+random_bandwidth_upper_bound = 20
 
 
 
@@ -46,7 +46,7 @@ def create_traffic_matrix():
             else:
                 # create a burst
                 if k == 0 and i == num_vms-1:
-                    row.append(1000000)
+                    row.append(100000)
                 elif busy_flag:
                     row.append(random.randint(random_bandwidth_upper_bound * 3 / 4, random_bandwidth_upper_bound))
                 else:
@@ -114,4 +114,4 @@ if __name__ == "__main__":
     test_config = create_physical_config_instance()
     
     print "migrate_policy is being called..."
-    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 10, [5, 719])
+    migrate_policy(num_vms, all_vm_consumption, traffic, all_original_placement, test_config, 10, [719])
